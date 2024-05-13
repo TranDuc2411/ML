@@ -2,20 +2,34 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
+from SVMtrain import train_svm_model
+from SVMtest import evaluate_model_on_test_data
 
-#hàm training model 
-def train_model(request):
+@csrf_exempt
+@require_http_methods(["POST"])
+def train_model_SVM(request):
     if request.method == 'POST':
-        # Xử lý logic để tạo mới dữ liệu
-        # Ví dụ: Lưu dữ liệu từ yêu cầu POST vào cơ sở dữ liệu
-        # data = {request.body}
-        # data = json.loads(request.body)
-        data = {'message': 'Data created successfully', 
-                'modelURL':"http://modele",
+        try:
+            # Gọi hàm train_svm_model từ file SVMtrain.py để huấn luyện mô hình
+            model_path = train_svm_model("dataset", "model")
+            
+            # Đánh giá hiệu suất của mô hình trên tập kiểm tra
+            accuracy = evaluate_model_on_test_data("dataset", "model")
+            
+            if model_path:
+                data = {
+                    'message': 'Model trained successfully',
+                    'modelURL': model_path,
+                    'accuracy': accuracy
                 }
-        return JsonResponse(data)
+                return JsonResponse(data)
+            else:
+                return JsonResponse({'error': 'Training failed'}, status=500)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
     else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
+
 
 def predict_fingerprint(request):
     # Logic để dự đoán vân tay ở đây
